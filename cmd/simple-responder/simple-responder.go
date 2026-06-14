@@ -15,6 +15,9 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+// black 1x1 PNG for image API responses
+const blackPixelPNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC"
+
 func main() {
 	gin.SetMode(gin.TestMode)
 	// Define a command-line flag for the port
@@ -286,7 +289,7 @@ func main() {
 		modelName := gjson.GetBytes(body, "model").String()
 		c.JSON(http.StatusOK, gin.H{
 			"model":  modelName,
-			"images": []string{},
+			"images": []string{blackPixelPNG},
 		})
 	})
 
@@ -298,16 +301,47 @@ func main() {
 		}
 		defer c.Request.Body.Close()
 
+		initImages := gjson.GetBytes(body, "init_images")
+		if !initImages.IsArray() || len(initImages.Array()) == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "img2img requires a non-empty init_images array"})
+			return
+		}
+
 		modelName := gjson.GetBytes(body, "model").String()
 		c.JSON(http.StatusOK, gin.H{
 			"model":  modelName,
-			"images": []string{},
+			"images": []string{blackPixelPNG},
 		})
 	})
 
 	r.GET("/sdapi/v1/loras", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"loras": []string{},
+		})
+	})
+
+	// OpenAI image API endpoints
+	r.POST("/v1/images/generations", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"data": []gin.H{{"b64_json": blackPixelPNG}},
+		})
+	})
+
+	r.POST("/v1/images/edits", func(c *gin.Context) {
+		if err := c.Request.ParseMultipartForm(10 << 20); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Error parsing multipart form: %s", err)})
+			return
+		}
+
+		file, _, err := c.Request.FormFile("image")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "edits requires an image file"})
+			return
+		}
+		file.Close()
+
+		c.JSON(http.StatusOK, gin.H{
+			"data": []gin.H{{"b64_json": blackPixelPNG}},
 		})
 	})
 
