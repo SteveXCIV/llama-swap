@@ -29,3 +29,28 @@ export async function generateImage(
 
   return response.json();
 }
+
+export async function editImage(
+  model: string,
+  prompt: string,
+  image: Blob,
+  signal?: AbortSignal
+): Promise<ImageGenerationResponse> {
+  const formData = new FormData();
+  formData.append("model", model);
+  formData.append("prompt", prompt);
+  formData.append("image", image, "image.png");
+
+  const response = await fetch("/v1/images/edits", {
+    method: "POST",
+    body: formData,
+    signal,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Image edit API error: ${response.status} - ${errorText}`);
+  }
+
+  return response.json();
+}

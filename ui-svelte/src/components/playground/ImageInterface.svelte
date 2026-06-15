@@ -1,8 +1,9 @@
 <script lang="ts">
   import { models } from "../../stores/api";
   import { persistentStore } from "../../stores/persistent";
-  import { generateImage } from "../../lib/imageApi";
-  import { generateSdImage, fetchSdLoras } from "../../lib/sdApi";
+  import { generateImage, editImage } from "../../lib/imageApi";
+  import { generateSdImage, generateSdImg2Img, fetchSdLoras } from "../../lib/sdApi";
+  import { dataUrlToBase64, dataUrlToBlob } from "../../lib/imageData";
   import { playgroundStores } from "../../stores/playgroundActivity";
   import ModelSelector from "./ModelSelector.svelte";
   import ExpandableTextarea from "./ExpandableTextarea.svelte";
@@ -100,6 +101,10 @@
     error = null;
     abortController = new AbortController();
 
+    const sourceImage = attachedImage;
+    attachedImage = null;
+    imageError = null;
+
     try {
       if (isSdapi) {
         const [w, h] = $selectedSizeStore.split("x").map(Number);
@@ -118,19 +123,35 @@
           lora: selectedLoras.length > 0 ? selectedLoras : undefined,
         };
 
-        const response = await generateSdImage(request, abortController.signal);
+        const response = sourceImage
+          ? await generateSdImg2Img(
+              {
+                ...request,
+                init_images: [dataUrlToBase64(sourceImage)],
+                denoising_strength: $sdDenoisingStore,
+              },
+              abortController.signal
+            )
+          : await generateSdImage(request, abortController.signal);
         if (response.images && response.images.length > 0) {
           generatedImages = response.images.map(
             (img) => `data:image/png;base64,${img}`
           );
         }
       } else {
-        const response = await generateImage(
-          $selectedModelStore,
-          trimmedPrompt,
-          $selectedSizeStore,
-          abortController.signal
-        );
+        const response = sourceImage
+          ? await editImage(
+              $selectedModelStore,
+              trimmedPrompt,
+              dataUrlToBlob(sourceImage),
+              abortController.signal
+            )
+          : await generateImage(
+              $selectedModelStore,
+              trimmedPrompt,
+              $selectedSizeStore,
+              abortController.signal
+            );
 
         if (response.data && response.data.length > 0) {
           const imageData = response.data[0];
