@@ -102,7 +102,6 @@
     abortController = new AbortController();
 
     const sourceImage = attachedImage;
-    attachedImage = null;
     imageError = null;
 
     try {
