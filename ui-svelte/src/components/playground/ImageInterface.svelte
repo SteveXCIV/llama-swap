@@ -20,6 +20,7 @@
   const sdSamplerStore = persistentStore<string>("playground-sdapi-sampler", "");
   const sdSchedulerStore = persistentStore<string>("playground-sdapi-scheduler", "");
   const sdBatchSizeStore = persistentStore<number>("playground-sdapi-batch-size", 1);
+  const sdDenoisingStore = persistentStore<number>("playground-sdapi-denoising", 0.75);
 
   let prompt = $state("");
   let isGenerating = $state(false);
@@ -330,6 +331,17 @@
             bind:value={$sdBatchSizeStore}
             min="1"
             max="8"
+          />
+        </label>
+        <label class="flex flex-col gap-1">
+          <span class="text-xs text-txtsecondary">Denoising ({$sdDenoisingStore.toFixed(2)})</span>
+          <input
+            type="range"
+            class="w-full accent-primary cursor-pointer"
+            bind:value={$sdDenoisingStore}
+            min="0"
+            max="1"
+            step="0.05"
           />
         </label>
         <label class="flex flex-col gap-1">
