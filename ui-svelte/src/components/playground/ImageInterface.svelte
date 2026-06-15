@@ -160,6 +160,8 @@
     generatedImages = [];
     error = null;
     prompt = "";
+    attachedImage = null;
+    imageError = null;
   }
 
   const ACCEPTED_IMAGE_FORMATS = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -442,8 +444,7 @@
     </div>
   {:else}
     <!-- Image display area -->
-    <div class="flex-1 relative mb-4">
-      <div class="absolute inset-0 overflow-auto flex items-center justify-center bg-surface border border-gray-200 dark:border-white/10 rounded">
+    <div class="flex-1 overflow-auto mb-4 flex items-center justify-center bg-surface border border-gray-200 dark:border-white/10 rounded">
       {#if isGenerating}
         <div class="text-center text-txtsecondary">
           <div class="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
@@ -510,15 +511,6 @@
           <p>Enter a prompt below to generate an image</p>
         </div>
       {/if}
-      </div>
-      {#if generatedImages.length > 0 || error}
-        <button
-          class="absolute top-2 right-2 z-10 px-3 py-1.5 text-sm rounded bg-black/60 hover:bg-black/80 text-white transition-colors cursor-pointer"
-          onclick={clearImage}
-        >
-          Clear
-        </button>
-      {/if}
     </div>
 
     <!-- Prompt input area -->
@@ -580,6 +572,13 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mx-auto">
               <path fill-rule="evenodd" d="M1 5.25A2.25 2.25 0 0 1 3.25 3h13.5A2.25 2.25 0 0 1 19 5.25v9.5A2.25 2.25 0 0 1 16.75 17H3.25A2.25 2.25 0 0 1 1 14.75v-9.5Zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 0 0 .75-.75v-2.69l-2.22-2.219a.75.75 0 0 0-1.06 0l-1.91 1.909.47.47a.75.75 0 1 1-1.06 1.06L6.53 8.091a.75.75 0 0 0-1.06 0l-2.97 2.97ZM12 7a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" clip-rule="evenodd" />
             </svg>
+          </button>
+          <button
+            class="btn flex-1 md:flex-none"
+            onclick={clearImage}
+            disabled={generatedImages.length === 0 && !error && !prompt.trim() && !attachedImage}
+          >
+            Clear
           </button>
           <button
             class="btn bg-primary text-btn-primary-text hover:opacity-90 flex-1 md:flex-none"
