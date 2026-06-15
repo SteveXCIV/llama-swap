@@ -30,6 +30,10 @@
   let fullscreenIndex = $state(0);
   let showSettings = $state(false);
 
+  let attachedImage = $state<string | null>(null);
+  let fileInput = $state<HTMLInputElement | null>(null);
+  let imageError = $state<string | null>(null);
+
   // SDAPI lora state
   let availableLoras = $state<SdApiLora[]>([]);
   let selectedLoras = $state<SdApiLoraRef[]>([]);
@@ -158,8 +162,51 @@
     prompt = "";
   }
 
-  function attachImages() {
-    // TODO: wire up image attachment for img2img
+  const ACCEPTED_IMAGE_FORMATS = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+  const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB
+
+  function validateImageFile(file: File): string | null {
+    if (!ACCEPTED_IMAGE_FORMATS.includes(file.type)) {
+      return `Invalid file type: ${file.type}. Accepted formats: JPG, PNG, GIF, WEBP`;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      return `File too large: ${(file.size / 1024 / 1024).toFixed(1)}MB. Maximum size: ${MAX_IMAGE_SIZE / 1024 / 1024}MB`;
+    }
+    return null;
+  }
+
+  function fileToDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleImageSelect(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+
+    imageError = null;
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      imageError = validationError;
+      return;
+    }
+
+    try {
+      attachedImage = await fileToDataUrl(file);
+    } catch (err) {
+      imageError = err instanceof Error ? err.message : "Failed to process image";
+    }
+  }
+
+  function removeAttachedImage() {
+    attachedImage = null;
+    imageError = null;
   }
 
   function downloadImage(index: number = 0) {
@@ -475,7 +522,41 @@
     </div>
 
     <!-- Prompt input area -->
-    <div class="shrink-0 flex flex-col md:flex-row gap-2">
+    <div class="shrink-0">
+      <input
+        type="file"
+        accept=".jpg,.jpeg,.png,.gif,.webp"
+        class="hidden"
+        bind:this={fileInput}
+        onchange={handleImageSelect}
+      />
+
+      {#if attachedImage}
+        <div class="mb-2 flex flex-wrap gap-2">
+          <div class="relative group">
+            <img
+              src={attachedImage}
+              alt="Attached source"
+              class="w-20 h-20 object-cover rounded border border-gray-200 dark:border-white/10"
+            />
+            <button
+              class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              onclick={removeAttachedImage}
+              title="Remove image"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      {/if}
+
+      {#if imageError}
+        <div class="mb-2 p-2 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded text-sm">
+          {imageError}
+        </div>
+      {/if}
+
+      <div class="flex flex-col md:flex-row gap-2">
       <ExpandableTextarea
         bind:value={prompt}
         placeholder="Describe the image you want to generate..."
@@ -491,10 +572,10 @@
         {:else}
           <button
             class="btn flex-1 md:flex-none"
-            onclick={attachImages}
+            onclick={() => fileInput?.click()}
             disabled={isGenerating || !$selectedModelStore}
-            title="Attach images"
-            aria-label="Attach images"
+            title="Attach image"
+            aria-label="Attach image"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mx-auto">
               <path fill-rule="evenodd" d="M1 5.25A2.25 2.25 0 0 1 3.25 3h13.5A2.25 2.25 0 0 1 19 5.25v9.5A2.25 2.25 0 0 1 16.75 17H3.25A2.25 2.25 0 0 1 1 14.75v-9.5Zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 0 0 .75-.75v-2.69l-2.22-2.219a.75.75 0 0 0-1.06 0l-1.91 1.909.47.47a.75.75 0 1 1-1.06 1.06L6.53 8.091a.75.75 0 0 0-1.06 0l-2.97 2.97ZM12 7a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" clip-rule="evenodd" />
@@ -508,6 +589,7 @@
             Generate
           </button>
         {/if}
+      </div>
       </div>
     </div>
   {/if}
