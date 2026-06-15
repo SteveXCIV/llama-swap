@@ -211,6 +211,11 @@ export interface SdApiTxt2ImgRequest {
   lora?: SdApiLoraRef[];
 }
 
+export interface SdApiImg2ImgRequest extends SdApiTxt2ImgRequest {
+  init_images: string[];
+  denoising_strength?: number;
+}
+
 export interface SdApiResponse {
   images: string[];
   parameters: Record<string, unknown>;
